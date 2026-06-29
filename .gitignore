@@ -1,0 +1,11 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.env
+static/reports/
+database/postgres/
+database/chromadb/
+.pytest_cache/
+.ipynb_checkpoints/
+*.log
