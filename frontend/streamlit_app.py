@@ -7,8 +7,10 @@ import pandas as pd
 from datetime import datetime
 import uuid
 
+import os
+
 # Configuration
-API_URL = "http://localhost:8000"
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 # Page configuration
 st.set_page_config(
