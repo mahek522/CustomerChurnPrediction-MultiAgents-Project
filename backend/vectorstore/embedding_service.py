@@ -34,7 +34,7 @@ def generate_embeddings(texts):
     # 2. Try HuggingFace Serverless Inference API (Free, no token required)
     try:
         print(f"Generating embeddings for {len(texts)} texts via HuggingFace Inference API...")
-        api_url = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
+        api_url = "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2"
         headers = {}
         
         # Use token if available
@@ -58,11 +58,17 @@ def generate_embeddings(texts):
                 elif isinstance(embeddings[0], float):
                     return [embeddings]
                     
-        print(f"HuggingFace API returned status {response.status_code}. Falling back to local SentenceTransformer.")
+        print(f"HuggingFace API returned status {response.status_code}: {response.text}. Falling back to local SentenceTransformer.")
     except Exception as api_err:
         print(f"HuggingFace API call failed: {api_err}. Falling back to local SentenceTransformer.")
 
-    # 3. Fallback to local SentenceTransformer
+    # 3. Fallback to local SentenceTransformer (Disabled on Render to avoid OOM)
+    if os.getenv("RENDER") is not None:
+        raise RuntimeError(
+            "Embedding generation failed: HuggingFace Inference API was unavailable, "
+            "and local SentenceTransformer loading is disabled on Render to prevent OOM crashes."
+        )
+
     model = get_model()
     if model is None:
         raise RuntimeError("Embedding model not loaded")
