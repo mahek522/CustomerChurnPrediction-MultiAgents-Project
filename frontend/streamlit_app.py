@@ -288,6 +288,7 @@ elif page == "📁 Data Upload":
             if st.button("Upload to ChromaDB", type="primary"):
                 with st.spinner("Processing and uploading data..."):
                     try:
+                        uploaded_file.seek(0) # Reset file pointer before sending
                         files = {"file": (uploaded_file.name, uploaded_file, "text/csv")}
                         response = requests.post(
                             f"{API_URL}/upload",
