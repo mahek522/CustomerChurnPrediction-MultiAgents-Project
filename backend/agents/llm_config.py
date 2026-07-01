@@ -36,8 +36,8 @@ else:
                 model="groq/llama-3.1-8b-instant",
                 api_key=os.getenv("GROQ_API_KEY"),
                 temperature=0.1,
-                max_retries=3,
-                timeout=60,
+                max_retries=12,
+                timeout=120,
             )
     else:
         # Use Groq with smaller model
@@ -45,7 +45,7 @@ else:
             model="groq/llama-3.1-8b-instant",
             api_key=os.getenv("GROQ_API_KEY"),
             temperature=0.1,
-            max_retries=3,
-            timeout=60,
+            max_retries=12,
+            timeout=120,
         )
         print("Using Groq (llama-3.1-8b-instant) - Note: Has rate limits (6000 TPM)")
