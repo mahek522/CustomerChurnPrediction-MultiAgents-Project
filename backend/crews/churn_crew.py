@@ -169,8 +169,29 @@ def execute_churn_crew_with_delay(session_id: str, user_query: str, context: str
         for i, task in enumerate(crew.tasks):
             print(f"Executing task {i+1}/{len(crew.tasks)}: {task.agent.role}")
             
-            # Execute task
-            task_output = task.execute_sync()
+            # Execute task with rate limit retry
+            max_task_retries = 4
+            task_wait = 15
+            task_output = None
+            
+            for attempt in range(max_task_retries):
+                try:
+                    task_output = task.execute_sync()
+                    break
+                except Exception as e:
+                    err_str = str(e)
+                    is_rate_limit = "RateLimitError" in err_str or "rate_limit_exceeded" in err_str or "429" in err_str
+                    
+                    if is_rate_limit and attempt < max_task_retries - 1:
+                        import re
+                        match = re.search(r"try again in (\d+\.?\d*)s", err_str)
+                        wait_seconds = float(match.group(1)) + 2.0 if match else task_wait
+                        print(f"\n⚠️ Groq Rate Limit Hit! Waiting {wait_seconds:.2f} seconds before retrying task...")
+                        time.sleep(wait_seconds)
+                        task_wait *= 1.5
+                    else:
+                        raise e
+                        
             results.append(task_output)
             
             # Add delay between tasks (except for the last one)
