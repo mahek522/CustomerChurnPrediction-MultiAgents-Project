@@ -217,7 +217,6 @@ torch==2.12.1
 tornado==6.5.7
 tqdm==4.68.3
 traitlets==5.15.1
-transformers==4.41.2
 typer==0.19.2
 types-requests==2.33.0.20260518
 typing-inspection==0.4.2
