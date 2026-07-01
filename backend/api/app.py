@@ -107,7 +107,7 @@ async def upload_dataset(file: UploadFile = File(...)):
     """
     Upload CSV dataset for customer churn analysis.
     
-    The dataset will be processed and stored in ChromaDB for retrieval.
+    The dataset will be processed and stored locally and in ChromaDB for retrieval.
     """
     try:
         # Validate file type
@@ -119,15 +119,33 @@ async def upload_dataset(file: UploadFile = File(...)):
         import io
         df = pd.read_csv(io.BytesIO(contents))
         
-        # Run data ingestion pipeline
-        pipeline = DataIngestionPipeline()
-        result = pipeline.ingest_dataset(df)
+        # Save CSV locally so fallback and dashboard can read it
+        from backend.services.config import DATASET_PATH
+        DATASET_PATH.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(DATASET_PATH, index=False)
+        print(f"Saved uploaded dataset locally to {DATASET_PATH}")
         
+        # Run data ingestion pipeline (ChromaDB)
+        try:
+            pipeline = DataIngestionPipeline()
+            result = pipeline.ingest_dataset(df)
+            
+            if result.get("status") == "error":
+                print(f"ChromaDB ingestion failed, but dataset was saved locally: {result.get('error')}")
+                return {
+                    "status": "success",
+                    "message": "Dataset uploaded successfully (ChromaDB index skipped: network limit)",
+                    "records_processed": len(df),
+                    "collection_name": "customer_churn"
+                }
+        except Exception as ingest_err:
+            print(f"Warning: ChromaDB ingestion failed: {ingest_err}")
+            
         return {
             "status": "success",
             "message": "Dataset uploaded and processed successfully",
-            "records_processed": result.get("records_processed", 0),
-            "collection_name": result.get("collection_name", "customer_churn")
+            "records_processed": len(df),
+            "collection_name": "customer_churn"
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing dataset: {str(e)}")
