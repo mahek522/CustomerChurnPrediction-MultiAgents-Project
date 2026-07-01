@@ -31,9 +31,13 @@ def generate_embeddings(texts):
         print("Mock mode enabled: returning dummy mock embeddings...")
         return [[0.1] * 384 for _ in texts]
         
-    # 2. Try HuggingFace Serverless Inference API (Free, no token required)
+    # 2. Try HuggingFace Serverless Inference API in batches of 50
+    import time
+    batch_size = 50
+    all_embeddings = []
+    
     try:
-        print(f"Generating embeddings for {len(texts)} texts via HuggingFace Inference API...")
+        print(f"Generating embeddings for {len(texts)} texts via HuggingFace Inference API in batches of {batch_size}...")
         api_url = "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2"
         headers = {}
         
@@ -42,25 +46,44 @@ def generate_embeddings(texts):
         if hf_token:
             headers["Authorization"] = f"Bearer {hf_token}"
             
-        response = requests.post(
-            api_url,
-            headers=headers,
-            json={"inputs": texts, "options": {"wait_for_model": True}},
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            embeddings = response.json()
-            if isinstance(embeddings, list) and len(embeddings) > 0:
-                # Ensure it's a list of floats
-                if isinstance(embeddings[0], list):
-                    return embeddings
-                elif isinstance(embeddings[0], float):
-                    return [embeddings]
-                    
-        print(f"HuggingFace API returned status {response.status_code}: {response.text}. Falling back to local SentenceTransformer.")
+        for i in range(0, len(texts), batch_size):
+            batch_texts = texts[i:i+batch_size]
+            batch_success = False
+            batch_result = None
+            
+            # Retry mechanism for transient DNS/connection issues
+            for attempt in range(3):
+                try:
+                    response = requests.post(
+                        api_url,
+                        headers=headers,
+                        json={"inputs": batch_texts, "options": {"wait_for_model": True}},
+                        timeout=30
+                    )
+                    if response.status_code == 200:
+                        batch_result = response.json()
+                        if isinstance(batch_result, list) and len(batch_result) > 0:
+                            # Handle single text input returning flat list vs list of lists
+                            if isinstance(batch_result[0], list):
+                                all_embeddings.extend(batch_result)
+                            elif isinstance(batch_result[0], float):
+                                all_embeddings.append(batch_result)
+                            batch_success = True
+                            break
+                    print(f"Batch {i//batch_size + 1} attempt {attempt + 1} returned status {response.status_code}. Retrying...")
+                except Exception as e:
+                    print(f"Batch {i//batch_size + 1} attempt {attempt + 1} failed: {e}. Retrying...")
+                time.sleep(2) # Short delay before retry
+                
+            if not batch_success:
+                raise RuntimeError(f"Failed to generate embeddings for batch starting at index {i}")
+                
+        if len(all_embeddings) == len(texts):
+            return all_embeddings
+            
+        print("Mismatched embedding count. Falling back to local SentenceTransformer.")
     except Exception as api_err:
-        print(f"HuggingFace API call failed: {api_err}. Falling back to local SentenceTransformer.")
+        print(f"HuggingFace API process failed: {api_err}. Falling back to local SentenceTransformer.")
 
     # 3. Fallback to local SentenceTransformer (Disabled on Render to avoid OOM)
     if os.getenv("RENDER") is not None:
