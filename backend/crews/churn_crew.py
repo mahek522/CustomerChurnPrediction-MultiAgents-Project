@@ -177,7 +177,20 @@ def execute_churn_crew_with_delay(session_id: str, user_query: str, context: str
             for attempt in range(max_task_retries):
                 try:
                     task_output = task.execute_sync()
-                    break
+                    
+                    # Detect if CrewAI caught an error internally and returned it as a string
+                    output_str = str(task_output)
+                    is_rate_limit = "RateLimitError" in output_str or "rate_limit_exceeded" in output_str or "rate limit" in output_str.lower()
+                    
+                    if is_rate_limit and attempt < max_task_retries - 1:
+                        import re
+                        match = re.search(r"try again in (\d+\.?\d*)s", output_str)
+                        wait_seconds = float(match.group(1)) + 2.0 if match else task_wait
+                        print(f"\n⚠️ Groq Rate Limit Hit (returned string)! Waiting {wait_seconds:.2f} seconds before retrying task...")
+                        time.sleep(wait_seconds)
+                        task_wait *= 1.5
+                    else:
+                        break
                 except Exception as e:
                     err_str = str(e)
                     is_rate_limit = "RateLimitError" in err_str or "rate_limit_exceeded" in err_str or "429" in err_str
@@ -186,7 +199,7 @@ def execute_churn_crew_with_delay(session_id: str, user_query: str, context: str
                         import re
                         match = re.search(r"try again in (\d+\.?\d*)s", err_str)
                         wait_seconds = float(match.group(1)) + 2.0 if match else task_wait
-                        print(f"\n⚠️ Groq Rate Limit Hit! Waiting {wait_seconds:.2f} seconds before retrying task...")
+                        print(f"\n⚠️ Groq Rate Limit Hit (exception)! Waiting {wait_seconds:.2f} seconds before retrying task...")
                         time.sleep(wait_seconds)
                         task_wait *= 1.5
                     else:
