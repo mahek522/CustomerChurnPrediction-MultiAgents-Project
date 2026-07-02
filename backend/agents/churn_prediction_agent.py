@@ -10,6 +10,8 @@ if str(ROOT) not in sys.path:
 from crewai import Agent
 from backend.agents.llm_config import llm, USE_MOCK_MODE
 
+from backend.tools.retrieval_tool import brave_search
+
 if USE_MOCK_MODE:
     churn_prediction_agent = Agent(
         role="Customer Churn Prediction Expert",
@@ -34,6 +36,7 @@ else:
         customers into Low Risk, Medium Risk, or High Risk.
         You rely solely on provided data. Never output any tool calls, function calls, or web searches.
         """,
+        tools=[brave_search],
         verbose=False,
         llm=llm
     )

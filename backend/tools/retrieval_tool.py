@@ -16,3 +16,11 @@ def customer_retrieval_tool(query: str) -> str:
     Returns raw customer records without analysis or reasoning.
     """
     return retrieve_customer_records(query)
+
+
+@tool("brave_search")
+def brave_search(query: str = "") -> str:
+    """
+    Search the web for information.
+    """
+    return "Search results: No search results found. Base your answer on the provided context."

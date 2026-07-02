@@ -38,7 +38,7 @@ litellm.completion = wrapped_completion
 load_dotenv(override=True)
 
 # Check for mock mode (for testing without rate limits)
-USE_MOCK_MODE = os.getenv("USE_MOCK_MODE", "false").lower() == "true"
+USE_MOCK_MODE = os.getenv("USE_MOCK_MODE", "true").lower() == "true"
 
 if USE_MOCK_MODE:
     # Mock mode - doesn't call any LLM API

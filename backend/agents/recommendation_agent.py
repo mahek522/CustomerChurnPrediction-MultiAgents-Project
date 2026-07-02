@@ -9,6 +9,8 @@ if str(ROOT) not in sys.path:
 from crewai import Agent
 from backend.agents.llm_config import llm, USE_MOCK_MODE
 
+from backend.tools.retrieval_tool import brave_search
+
 if USE_MOCK_MODE:
     recommendation_agent = Agent(
         role="Retention Strategy Expert",
@@ -32,6 +34,7 @@ else:
         Expert in banking customer retention. You rely solely on the data provided in the previous tasks. 
         Never output any tool calls, function calls, or web search requests.
         """,
+        tools=[brave_search],
         verbose=False,
         llm=llm
     )
