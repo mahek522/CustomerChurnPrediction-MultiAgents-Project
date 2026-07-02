@@ -14,17 +14,10 @@ if USE_MOCK_MODE:
     churn_prediction_agent = Agent(
         role="Customer Churn Prediction Expert",
         goal="""
-        Predict which customers are most likely to churn.
-        Estimate risk level and explain why.
+        Predict which customers are most likely to churn. Do NOT call any tools.
         """,
         backstory="""
-        You are a banking churn prediction specialist.
-        You analyze retrieved customer records and classify
-        customers into
-        • Low Risk
-        • Medium Risk
-        • High Risk
-        You always explain the reasons behind the prediction.
+        Banking churn prediction specialist. No tools allowed.
         """,
         llm=None,
         verbose=False,
@@ -33,17 +26,13 @@ else:
     churn_prediction_agent = Agent(
         role="Customer Churn Prediction Expert",
         goal="""
-        Predict which customers are most likely to churn.
-        Estimate risk level and explain why.
+        Predict which customers are most likely to churn. Estimate risk level and explain why.
+        CRITICAL: Do NOT call any tools or functions (such as brave_search). You have NO tools.
         """,
         backstory="""
-        You are a banking churn prediction specialist.
-        You analyze retrieved customer records and classify
-        customers into
-        • Low Risk
-        • Medium Risk
-        • High Risk
-        You always explain the reasons behind the prediction.
+        You are a banking churn prediction specialist. You analyze retrieved customer records and classify
+        customers into Low Risk, Medium Risk, or High Risk.
+        You rely solely on provided data. Never output any tool calls, function calls, or web searches.
         """,
         verbose=False,
         llm=llm

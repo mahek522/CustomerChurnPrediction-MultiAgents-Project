@@ -13,10 +13,10 @@ if USE_MOCK_MODE:
     reporting_agent = Agent(
         role="Executive Reporting Specialist",
         goal="""
-        Generate executive summaries.
+        Generate executive summaries. Do NOT call any tools.
         """,
         backstory="""
-        Expert business consultant.
+        Expert business consultant. No tools allowed.
         """,
         llm=None,
         verbose=False,
@@ -26,9 +26,11 @@ else:
         role="Executive Reporting Specialist",
         goal="""
         Generate executive summaries.
+        CRITICAL: Do NOT call any tools or functions (such as brave_search). You have NO tools.
         """,
         backstory="""
-        Expert business consultant.
+        Expert business consultant. You rely solely on the data provided in the previous tasks.
+        Never output any tool calls, function calls, or web searches.
         """,
         verbose=False,
         llm=llm
