@@ -11,6 +11,9 @@ The Customer Churn Intelligence Platform leverages CrewAI's multi-agent system t
 ## ✨ Features
 
 - **Multi-Agent Collaboration**: 6 specialized AI agents collaborate sequentially to process, analyze, predict, and validate churn queries.
+- **Global API Rate-Limit Interceptor**: Patches the core `litellm` completion layer to intercept and block-retry on Groq `RateLimitError` (429) responses with dynamic cooling-off backoffs.
+- **Tool Hallucination Shield**: Equips all agents with a dummy `brave_search` tool configuration, preventing Groq validation crashes (`BadRequestError`) when the model replicates default system prompts.
+- **Resilient Offline Fallback**: Saves uploaded CSV files locally and falls back to structured Pandas parsing if vector database indexing or HuggingFace embedding APIs fail due to network constraints.
 - **Dynamic Analytics Grounding**: Enforces strict numerical validation on statistical inquiries using Pandas aggregations to eliminate LLM mathematical hallucinations.
 - **Pydantic AI Validation**: Enforces business compliance (Grounding, Hallucination checks, and Confidence Score threshold $\ge 70\%$) using a structured validation schema.
 - **Executive PDF Export**: Generates and downloads professionally formatted executive summary reports in PDF.
@@ -144,39 +147,32 @@ streamlit run frontend/streamlit_app.py
 
 ---
 
-## ☁️ Deployment Guide (Railway)
+## ☁️ Deployment Guide (Render)
 
-Follow these steps to deploy the PostgreSQL database, FastAPI backend, and Streamlit frontend on Railway.
+Follow these steps to deploy the PostgreSQL database, FastAPI backend, and Streamlit frontend on Render.
 
-### 1. Provision a PostgreSQL Database on Railway
-1. Go to the [Railway Console](https://railway.app/) and create a new project.
-2. Select **Provision PostgreSQL**.
-3. Under the PostgreSQL service, go to **Variables** and copy the **DATABASE_URL** (e.g. `postgresql://postgres:password@host:port/railway`).
+### 1. Provision a PostgreSQL Database on Render
+1. Go to the [Render Dashboard](https://dashboard.render.com/) and create a new project.
+2. Click **New** $\rightarrow$ **PostgreSQL**.
+3. Configure your database instance and copy the **External Database URL** (e.g. `postgres://user:password@host/database`).
+*(Note: The platform automatically handles rewriting the `postgres://` dialect prefix to SQLAlchemy-compatible `postgresql://` format on boot).*
 
 ### 2. Deploy the FastAPI Backend
-1. Click **New** $\rightarrow$ **Github Repo** $\rightarrow$ select your repository.
-2. Under **Variables** for the backend service, add:
-   - `DATABASE_URL` = *Your Railway PostgreSQL URL*
+1. Click **New** $\rightarrow$ **Web Service** $\rightarrow$ select your Github repository.
+2. Choose **Python 3** environment.
+3. Under **Variables**, add:
+   - `DATABASE_URL` = *Your Render PostgreSQL Connection String*
    - `GROQ_API_KEY` = *Your Groq Cloud API Key*
    - `USE_OLLAMA` = `false`
-   - `USE_MOCK_MODE` = `false`
-   - `PORT` = `8000`
-3. Under **Settings**, set:
+   - `USE_MOCK_MODE` = `true` *(Recommended to keep as `true` for instant, zero-cost, error-free execution; set to `false` to use live Groq LLM reasoning)*
+4. Under **Settings**, configure:
    - **Start Command**: `uvicorn backend.api.app:app --host 0.0.0.0 --port $PORT`
-4. Under **Network**, click **Generate Domain** to get your backend URL (e.g., `https://backend-production.up.railway.app`).
+5. Render will automatically expose the backend URL (e.g., `https://customerchurnprediction-multiagents.onrender.com`).
 
-### 3. Run Ingestion Scripts on the Cloud Postgres
-Using the Railway CLI, run the database migrations in your project directory:
-```bash
-railway run python setup_postgres.py
-railway run python setup_chromadb.py
-```
-
-### 4. Deploy the Streamlit Frontend
-1. Click **New** $\rightarrow$ **Github Repo** $\rightarrow$ select your repository.
-2. Rename the service to `frontend` or `streamlit-dashboard`.
-3. Under **Variables** for the frontend service, add:
-   - `API_URL` = *Your Backend URL generated in Step 2* (e.g. `https://backend-production.up.railway.app`)
-4. Under **Settings**, set:
+### 3. Deploy the Streamlit Frontend
+1. Click **New** $\rightarrow$ **Web Service** $\rightarrow$ select your Github repository.
+2. Under **Variables**, add:
+   - `API_URL` = *Your FastAPI Backend URL* (e.g. `https://customerchurnprediction-multiagents.onrender.com`)
+3. Under **Settings**, configure:
    - **Start Command**: `streamlit run frontend/streamlit_app.py --server.port $PORT --server.address 0.0.0.0`
-5. Under **Network**, click **Generate Domain** to get your public user-facing Streamlit URL.
+4. Click **Create Web Service** to make your customer dashboard live.
