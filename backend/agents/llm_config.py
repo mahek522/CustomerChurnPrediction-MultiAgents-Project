@@ -1,7 +1,39 @@
 import os
 import time
+import re
+import litellm
 from dotenv import load_dotenv
 from crewai import LLM
+
+# Monkey-patch litellm.completion to handle Groq Rate Limit (429) globally
+original_completion = litellm.completion
+
+def wrapped_completion(*args, **kwargs):
+    max_retries = 8
+    backoff = 10
+    
+    for attempt in range(max_retries):
+        try:
+            return original_completion(*args, **kwargs)
+        except Exception as e:
+            err_str = str(e)
+            is_rate_limit = (
+                "RateLimitError" in err_str 
+                or "rate_limit_exceeded" in err_str 
+                or "rate limit" in err_str.lower()
+                or "429" in err_str
+            )
+            
+            if is_rate_limit and attempt < max_retries - 1:
+                match = re.search(r"try again in (\d+\.?\d*)s", err_str)
+                wait_seconds = float(match.group(1)) + 2.0 if match else backoff
+                print(f"\n⚠️ Groq Rate Limit Hit globally! Sleeping {wait_seconds:.2f} seconds before retrying API call (attempt {attempt+1}/{max_retries})...", flush=True)
+                time.sleep(wait_seconds)
+                backoff *= 1.5
+            else:
+                raise e
+
+litellm.completion = wrapped_completion
 
 load_dotenv(override=True)
 
